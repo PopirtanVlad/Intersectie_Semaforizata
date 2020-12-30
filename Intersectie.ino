@@ -15,26 +15,26 @@
 
 #define CARS1_RED 22
 #define CARS1_YELLOW 23
-#define CARS1_GREEN 24
+#define CARS1_GREEN 49
 #define CARS1_INTERMITENT_GREEN 25
 #define HUMAN1_RED 26
 #define HUMAN1_GREEN 27
 
-#define CARS2_RED 28
+#define CARS2_RED 50
 #define CARS2_YELLOW 29
-#define CARS2_GREEN 30
+#define CARS2_GREEN 51
 #define CARS2_INTERMITENT_GREEN 31
 #define HUMAN2_RED 32
 #define HUMAN2_GREEN 33
 
-#define CARS3_RED 34
+#define CARS3_RED 53
 #define CARS3_YELLOW 35
-#define CARS3_GREEN 36
+#define CARS3_GREEN 52
 #define CARS3_INTERMITENT_GREEN 37
 #define HUMAN3_RED 38
 #define HUMAN3_GREEN 39
 
-#define CARS4_RED 40
+#define CARS4_RED 43
 #define CARS4_YELLOW 41
 #define CARS4_GREEN 42
 #define CARS4_INTERMITENT_GREEN 43
@@ -84,10 +84,10 @@ void setup()
   pinMode(PIR_2,INPUT);
   pinMode(PIR_3,INPUT);
   pinMode(PIR_4,INPUT);
-  pinMode(IR_1,INPUT);
-  pinMode(IR_2,INPUT);
-  pinMode(IR_3,INPUT);
-  pinMode(IR_4,INPUT);
+  pinMode(IR_1,INPUT_PULLUP);
+  pinMode(IR_2,INPUT_PULLUP);
+  pinMode(IR_3,INPUT_PULLUP);
+  pinMode(IR_4,INPUT_PULLUP);
   pinMode(CARS1_RED, OUTPUT);
   pinMode(CARS1_YELLOW, OUTPUT);
   pinMode(CARS1_GREEN, OUTPUT);
@@ -121,18 +121,17 @@ void setup()
 }
 
 void loop(){
-    semCars(0,RED);
-    semCars(1,GREEN);
-    writeOnLeds();
-    intermitentBlink();
-  
+    readSensors();
+    checkStreetTraffic();
+    Serial.println(semCar[1].senzorIR);
+    writeOnLeds();  
 }
 
 void writeOnLeds(){
-   digitalWrite(22,semCar[0].r);digitalWrite(23,semCar[0].y);digitalWrite(24,semCar[0].g);digitalWrite(26,semPed[0].r);digitalWrite(27,semPed[0].g);
-   digitalWrite(28,semCar[0].r);digitalWrite(29,semCar[0].y);digitalWrite(30,semCar[0].g);digitalWrite(32,semPed[0].r);digitalWrite(33,semPed[0].g);
-   digitalWrite(34,semCar[0].r);digitalWrite(35,semCar[0].y);digitalWrite(36,semCar[0].g);digitalWrite(38,semPed[0].r);digitalWrite(39,semPed[0].g);
-   digitalWrite(40,semCar[0].r);digitalWrite(41,semCar[0].y);digitalWrite(42,semCar[0].g);digitalWrite(44,semPed[0].r);digitalWrite(45,semPed[0].g);
+   digitalWrite(22,semCar[0].r);digitalWrite(23,semCar[0].y);digitalWrite(49,semCar[0].g);digitalWrite(26,semPed[0].r);digitalWrite(27,semPed[0].g);
+   digitalWrite(50,semCar[1].r);digitalWrite(29,semCar[1].y);digitalWrite(51,semCar[1].g);digitalWrite(32,semPed[1].r);digitalWrite(33,semPed[1].g);
+   digitalWrite(53,semCar[2].r);digitalWrite(35,semCar[2].y);digitalWrite(52,semCar[2].g);digitalWrite(38,semPed[2].r);digitalWrite(39,semPed[2].g);
+   digitalWrite(42,semCar[3].r);digitalWrite(41,semCar[3].y);digitalWrite(43,semCar[3].g);digitalWrite(44,semPed[3].r);digitalWrite(45,semPed[3].g);
 }
 
 void intermitentBlink(){
@@ -158,7 +157,7 @@ void intermitentBlink(){
   }
 }
 
-void semCars(int whichSem, int whichColor){//1=red 2=yellow 3=green
+void semCars(int whichSem, int whichColor){//0=red 1=yellow 2=green
   switch(whichColor){
     case 0:
       semCar[whichSem].r=true;
@@ -227,78 +226,48 @@ void debounceButton4(){
 
 
 void checkStreetTraffic(){
-  bool firstTime[4]={true,true,true,true};
-  while(semCar[0].senzorIR<300){
-    /*functie de checkWhichGreen
-     * if(firstTime[greenSem]){
-     *  semCars(greenSem,1);
-        Asteapta 2 secunde cu semaforul pe galben
-      }
-    */
+  if(semCar[0].senzorIR>1000){
     semCars(0, 2);
     semCars(1, 0);
     semCars(2, 0);
     semCars(3, 0);
-    /*timer in care asteapta 1 secunda intre masini
-    while(count>0){
-      count--;
-    }
-    */
   }
-  if (semCar[1].senzorIR<300){
-    //Temporizare cu intreruperi
-    semCars(1, 2);
+ if(semCar[1].senzorIR>1000){
+    semCars(2, 2);
+    semCars(1, 0);
     semCars(0, 0);
-    semCars(2, 0);
     semCars(3, 0);
-  }
-  if (semCar[2].senzorIR<300){
+  }/*
+  if(semCar[2].senzorIR>1000){
     //Temporizare cu intreruperi
     semCars(2, 2);
     semCars(1, 0);
     semCars(0, 0);
     semCars(3, 0);
   }
-  if (semCar[3].senzorIR<300){
+  if(semCar[3].senzorIR>1000){
     //Temporizare cu intreruperi
     semCars(3, 2);
     semCars(0, 0);
     semCars(1, 0);
     semCars(2, 0);
-  }
+  }*/
 }
 
 void readSensors(){
-  pedestrian[0].senzor=analogRead(PIR_1);
+  /*pedestrian[0].senzor=analogRead(PIR_1);
   pedestrian[1].senzor=analogRead(PIR_2);
   pedestrian[2].senzor=analogRead(PIR_3);
-  pedestrian[3].senzor=analogRead(PIR_4); 
+  pedestrian[3].senzor=analogRead(PIR_4);*/ 
   semCar[0].senzorIR=analogRead(IR_1);
   semCar[1].senzorIR=analogRead(IR_2);
   semCar[2].senzorIR=analogRead(IR_3);
   semCar[3].senzorIR=analogRead(IR_4); 
 }
 
-void semPedestrians(int whichSem){
-  if(TCNT1==0){
-    while(TCNT1<2){
-      semCars(whichSem,1);      
-    }
-  }
-  else{
-    while(TCNT2<2){
-      semCars(whichSem,1);
-    }
-  }
-  if(pedestrian[whichSem].senzor!=0){
-    semPed[whichSem].r=false; semPed[whichSem].g=true;
-  }
-  else{
-    semPed[whichSem].r=true; semPed[whichSem].g=false;
-  }
-}
 
-void resolve_pedestrian(){
+
+/*void resolve_pedestrian(){
   if(pedestrian[0].waiting){
     semPedestrians(0);
   }
@@ -311,4 +280,4 @@ void resolve_pedestrian(){
   if(pedestrian[3].waiting){
      semPedestrians(3);
   }
-}
+}*/
