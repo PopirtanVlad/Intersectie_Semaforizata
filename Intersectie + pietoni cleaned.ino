@@ -83,9 +83,6 @@ void setup()
   pinMode(BUTTON_3_PEDESTRIAN, INPUT_PULLUP);
   pinMode(BUTTON_4_PEDESTRIAN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BUTTON_1_PEDESTRIAN),debounceButton1,FALLING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_2_PEDESTRIAN),debounceButton2,FALLING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_3_PEDESTRIAN),debounceButton3,FALLING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_4_PEDESTRIAN),debounceButton4,FALLING);
   Serial.begin(9600);
 }
 
@@ -171,40 +168,6 @@ ISR(TIMER1_COMPA_vect){
    pedestrian1Counter=false;
 }
 
-void debounceButton2(){
-  static unsigned long debouncing_time = 100;
-  static unsigned long last_millis = millis();
-  
-  if((millis() - last_millis) >= debouncing_time)
-  {
-       pedestrian[1].waiting=true;
-  }
-   last_millis = millis();
-}
-
-
-void debounceButton3(){
-  static unsigned long debouncing_time = 100;
-  static unsigned long last_millis = millis();
-  
-  if((millis() - last_millis) >= debouncing_time)
-  {
-      pedestrian[2].waiting=true;
-  }
-   last_millis = millis();
-}
-
-void debounceButton4(){
-  static unsigned long debouncing_time = 100;
-  static unsigned long last_millis = millis();
-  
-  if((millis() - last_millis) >= debouncing_time)
-  {
-       pedestrian[3].waiting=true;
-  }
-   last_millis = millis();
-}
-
 
 
 void checkStreetTraffic(){
@@ -212,10 +175,6 @@ void checkStreetTraffic(){
     int ok=1; //Verificam daca nu e deja un semafor verde.
     for(int i=0;i<3;i++){
       if(i!=0 && semCar[i].senzorIR>500){
-        ok=0;
-        break;
-      }
-      if(pedestrian[i].waiting==true){
         ok=0;
         break;
       }
@@ -234,10 +193,6 @@ void checkStreetTraffic(){
         ok=0;
         break;
       }
-      if(pedestrian[i].waiting==true){
-        ok=0;
-        break;
-      }
     }
     if (ok==1 && semCar[1].r==true){
       semCars(1, 1);
@@ -253,11 +208,6 @@ void checkStreetTraffic(){
         ok=0;
         break;
       }
-      if(pedestrian[i].waiting==true){
-        ok=0;
-        break;
-      }
-    }
     if (ok==1 && semCar[2].r==true){
       semCars(2, 1);
       semCars(1, 0);
@@ -265,14 +215,11 @@ void checkStreetTraffic(){
       semCars(3, 0);
     }
   }
+ }
   if(semCar[3].senzorIR>500 && pedestrian1Counter==false){
     int ok=1; //Verificam daca nu e deja un semafor verde.
     for(int i=0;i<3;i++){
       if(i!=3 && semCar[i].senzorIR>500){
-        ok=0;
-        break;
-      }
-      if(pedestrian[i].waiting==true){
         ok=0;
         break;
       }
@@ -285,50 +232,11 @@ void checkStreetTraffic(){
     }
   }
 }
+ 
 
 void readSensors(){
   semCar[0].senzorIR=analogRead(IR_1);
   semCar[1].senzorIR=analogRead(IR_2);
   semCar[2].senzorIR=analogRead(IR_3);
   semCar[3].senzorIR=analogRead(IR_4); 
-}
-
-
-void semPedestrians(int whichPed){
-  boolean greenValue[4]={false,false,false,false};
-  for(int i=0;i<4;i++){
-    greenValue[4]=semCar[i].g;
-    if(i==whichPed){
-      semCars(i,RED);
-      semPed[i].g=true;
-    }
-    else{
-      semCars(i,GREEN);
-      semPed[i].g=false;
-    }
-  }
-  delay(1000);
-  for(int i=0;i<4;i++){
-    semCar[i].g=greenValue[i];
-    semCar[i].r=not greenValue[i];
-  }
-  pedestrian[whichPed].waiting=false;
-}
-
-void resolve_pedestrian(){
-  if(pedestrian[0].waiting){
-    semPedestrians(0);
-    return;
-  }
-  if(pedestrian[1].waiting){
-     semPedestrians(1);
-     return;
-  }
-  if(pedestrian[2].waiting){
-     semPedestrians(2);
-     return;
-  }
-  if(pedestrian[3].waiting){
-     semPedestrians(3);
-  }
 }
