@@ -40,22 +40,19 @@ struct semaphorePed{
 };
 
 //Structura om
-struct pedestrianStruct{
+/*struct pedestrianStruct{
   volatile boolean waiting;
   volatile int senzor;  
-};
-
+};*/
 //Variabile de timp
 volatile int pedestrian1Counter=false;
 
 //Variabile semafoare
 semaphoreCars semCar[4]={{false,true,0},{true,false,0},{true,false,0},{true,false,0}};
-semaphorePed semPed[4]={{true},{false},{false},{false}};
-volatile boolean pedestrianWaiting[4]={false,false,false,false};
+semaphorePed semPed[4]={{false},{false},{false},{false}};
 boolean prevGreens[4]={false,false,false,false};
 
-//Variabile oameni
-pedestrianStruct pedestrian[4]={{false,0},{false,0},{false,0},{false,0}};
+
 
 void setup()
 {
@@ -77,16 +74,17 @@ void setup()
   pinMode(CARS4_RED, OUTPUT);
   pinMode(CARS4_GREEN, OUTPUT);
   pinMode(HUMAN4_GREEN, OUTPUT);
-  pinMode(9,OUTPUT);
   pinMode(BUTTON_1_PEDESTRIAN, INPUT_PULLUP);
   pinMode(BUTTON_2_PEDESTRIAN, INPUT_PULLUP);
   pinMode(BUTTON_3_PEDESTRIAN, INPUT_PULLUP);
   pinMode(BUTTON_4_PEDESTRIAN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_1_PEDESTRIAN),debounceButton1,FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_1_PEDESTRIAN),buttonPressed,FALLING);
   Serial.begin(9600);
 }
 
 void loop(){
+  //Daca pedestrian1Counter are valoarea 'true', inseamna ca ne aflam in intervalul de 4 secunde in care un pieton poate trece strada.
+  //Daca un pieton poate trece strada, semaforul pentru masini nu trebuie sa permita culoarea verde, pentru a evita accidentele.
   if(pedestrian1Counter==false){
     checkStreetTraffic();
     readSensors();
@@ -95,13 +93,14 @@ void loop(){
 }
 
 void writeOnLeds(){
-   digitalWrite(41,semCar[0].r);digitalWrite(40,semCar[0].g);digitalWrite(23,semPed[0].g);
-   digitalWrite(50,semCar[1].r);digitalWrite(51,semCar[1].g);digitalWrite(24,semPed[1].g);
-   digitalWrite(53,semCar[2].r);digitalWrite(52,semCar[2].g);digitalWrite(22,semPed[2].g);
-   digitalWrite(42,semCar[3].r);digitalWrite(43,semCar[3].g);digitalWrite(25,semPed[3].g);
+   digitalWrite(41,semCar[0].r);digitalWrite(40,semCar[0].g);
+   digitalWrite(50,semCar[1].r);digitalWrite(51,semCar[1].g);
+   digitalWrite(53,semCar[2].r);digitalWrite(52,semCar[2].g);
+   digitalWrite(42,semCar[3].r);digitalWrite(43,semCar[3].g);
 }
 
 void intermitent(){
+  //Pentru fiecare semafor verificam daca este activ in starea rosu. Daca da, negam valoarea.
   for(int i=0;i<4;i++){
     if (semCar[i].r==true){
       if(semCar[i].g==false){
@@ -114,6 +113,7 @@ void intermitent(){
 }
 
 void semCars(int whichSem, int whichColor){//0=red 1=green
+  //whichSem decide ce semafor isi schimba culoarea, iar whichColor decide culoarea pe care o dorim.
   switch(whichColor){
     case 0:
       semCar[whichSem].r=true;
@@ -126,38 +126,44 @@ void semCars(int whichSem, int whichColor){//0=red 1=green
   }
 }
 
-void debounceButton1(){
+void buttonPressed(){
+   //Verificam daca butonul nu a fost deja apasat. Daca este prima oara in intervalul de 4 secunde, salvam culorile precedente ale semafoarelor si asignam valoarea true variabilei de test.
    if(pedestrian1Counter==false){
+      
       pedestrian1Counter=true;
       for(int i=0;i<4;i++){
-      prevGreens[i]=semCar[i].g;
-   }
-   digitalWrite(HUMAN1_GREEN,HIGH);
-   digitalWrite(HUMAN3_GREEN,HIGH);
-   semCars(0,RED);
-   semCars(1,GREEN);
-   semCars(2,RED);
-   semCars(3,GREEN);
-   cli(); // facem disable la întreruperile globale
-   TCCR1A = 0; // setăm TCCR1A și B la 0
-   TCCR1B = 0;
-   // setăm registrul cu valoarea căruia vom compara TCNT
-   OCR1A = 64624;
-   // activăm modul CTC:
-   TCCR1B |= (1 << WGM12);
-   TCCR1B |= (1 << CS10);
-   TCCR1B |= (1 << CS12);
-   // facem enable la întreruperea la comparare prin setarea
-   //bitului
-   // corespunzător din mască
-   TIMSK1 |= (1 << OCIE1A);
-   // validăm sistemul global de întreruperi
-   sei();
-  }
+        prevGreens[i]=semCar[i].g;
+     }
+     //Aprindem ledurile pentru pietoni de pe sensurile opuse si stingem/aprindem semafoarele masinilor in functie de pietoni.
+     digitalWrite(HUMAN1_GREEN,HIGH);
+     digitalWrite(HUMAN3_GREEN,HIGH);
+     semCars(0,RED);
+     semCars(1,GREEN);
+     semCars(2,RED);
+     semCars(3,GREEN);
+     //Dezactivam intreruperile globale
+     cli(); 
+     //Setam valoarea timerelor la 0
+     TCCR1A = 0; 
+     TCCR1B = 0;
+     // setăm registrul cu valoarea căruia vom compara TCNT
+     OCR1A = 64624;
+     // activăm modul CTC:
+     TCCR1B |= (1 << WGM12);
+     TCCR1B |= (1 << CS10);
+     TCCR1B |= (1 << CS12);
+     // facem enable la întreruperea la comparare prin setarea bitului corespunzător din mască
+     TIMSK1 |= (1 << OCIE1A);
+     //Reactivam interuperile globale
+     sei();
+    }
 }
 
+//Rutina de intreruperi. Aceasta functie este apelata atunci cand counterul intern depaseste valoarea salvata in registrul de comparare.
 ISR(TIMER1_COMPA_vect){
+   //Pentru a nu se repeta acest bloc de instructiuni la fiecare 4 secunde pentru o perioada nelimitata de timp, vom folosi variabila pedestrian1Counter.
    if(pedestrian1Counter==true){
+    //Daca aceasta a fost activata precedent de catre functia intreruperii, stingem ledurile pietonilor si dam semafoarelor variabilele dinainte de a avea loc intreruperea.
      digitalWrite(HUMAN1_GREEN,LOW);
      digitalWrite(HUMAN3_GREEN,LOW);
      for(int i=0;i<4;i++){
@@ -165,12 +171,17 @@ ISR(TIMER1_COMPA_vect){
         semCar[i].r=not prevGreens[i];
      }
    }
+   //Ne asiguram ca variabila de test trece la valoarea false.
    pedestrian1Counter=false;
 }
 
 
-
+//Functie ce verifica starea traficului
 void checkStreetTraffic(){
+  //Daca senzorul semaforului respectiv, citeste o luminozitate scazuta, inseamna ca masina se afla in fata senzorului.
+  //Daca aceasta conditie este indeplinita, impreuna cu valoarea 'false' a variabilei de conditie pentru semaforul pietonilor
+  //verificam daca exista alt senzor ce intercepteaza o masina in fata sa. Daca da, ne asiguram ca nu se schimba culoarea.
+  //Daca functia trece de ambele conditii si culoarea actuala este rosie(conditie adaugata pentru intermitent), culoarea semaforului va deveni verde, iar celalalte se vor schimba in rosu.
   if(semCar[0].senzorIR>500 && pedestrian1Counter==false){
     int ok=1; //Verificam daca nu e deja un semafor verde.
     for(int i=0;i<3;i++){
@@ -180,10 +191,10 @@ void checkStreetTraffic(){
       }
     }
     if (ok==1 && semCar[0].r==true){
-      semCars(0, 1);
-      semCars(1, 0);
-      semCars(2, 0);
-      semCars(3, 0);
+      semCars(0, GREEN);
+      semCars(1, RED);
+      semCars(2, RED);
+      semCars(3, RED);
     }
   }
  if(semCar[1].senzorIR>500){
@@ -195,10 +206,10 @@ void checkStreetTraffic(){
       }
     }
     if (ok==1 && semCar[1].r==true){
-      semCars(1, 1);
-      semCars(2, 0);
-      semCars(0, 0);
-      semCars(3, 0);
+      semCars(1, GREEN);
+      semCars(2, RED);
+      semCars(0, RED);
+      semCars(3, RED);
     }
   }
   if(semCar[2].senzorIR>500){
@@ -209,10 +220,10 @@ void checkStreetTraffic(){
         break;
       }
     if (ok==1 && semCar[2].r==true){
-      semCars(2, 1);
-      semCars(1, 0);
-      semCars(0, 0);
-      semCars(3, 0);
+      semCars(2, GREEN);
+      semCars(1, RED);
+      semCars(0, RED);
+      semCars(3, RED);
     }
   }
  }
@@ -225,16 +236,17 @@ void checkStreetTraffic(){
       }
     }
     if (ok==1 && semCar[3].r==true){
-      semCars(3, 1);
-      semCars(0, 0);
-      semCars(1, 0);
-      semCars(2, 0);
+      semCars(3, GREEN);
+      semCars(0, RED);
+      semCars(1, RED);
+      semCars(2, RED);
     }
   }
 }
  
 
 void readSensors(){
+  //Citim cei 4 senzori.
   semCar[0].senzorIR=analogRead(IR_1);
   semCar[1].senzorIR=analogRead(IR_2);
   semCar[2].senzorIR=analogRead(IR_3);
